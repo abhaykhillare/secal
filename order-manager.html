@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Snack Center – Order Manager Pro</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root { --primary: #059669; --bg: #f1f5f9; }
+        * { transition: all .15s ease; }
+        .card-anim { animation: slideIn 0.3s ease-out; }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .btn:active { transform: scale(0.95); }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        input[type="number"]::-webkit-inner-spin-button { display: none; }
+    </style>
+</head>
+
+<body class="bg-[var(--bg)] text-slate-800 min-h-screen font-sans">
+
+    <header class="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b">
+        <div class="flex gap-2 p-3 overflow-x-auto no-scrollbar text-sm font-semibold">
+            <button data-filter="all" class="filter px-5 py-2 rounded-full bg-slate-900 text-white shadow-lg">All</button>
+            <button data-filter="pending" class="filter px-5 py-2 rounded-full bg-white border">Pending</button>
+            <button data-filter="preparing" class="filter px-5 py-2 rounded-full bg-white border">Preparing</button>
+            <button data-filter="served" class="filter px-5 py-2 rounded-full bg-white border">Served</button>
+            <button data-filter="unpaid" class="filter px-5 py-2 rounded-full bg-white border text-red-600">Unpaid</button>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto p-4 grid lg:grid-cols-12 gap-6">
+
+        <section class="lg:col-span-4 space-y-4">
+            <div class="bg-white rounded-2xl shadow-sm border overflow-hidden">
+                <button onclick="toggleAccordion('orderForm')" class="w-full flex justify-between items-center p-4 bg-slate-50 border-b">
+                    <span class="font-bold text-lg">New Order</span>
+                    <span id="accIcon">▼</span>
+                </button>
+                
+                <div id="orderForm" class="p-4 space-y-4">
+                    <div>
+                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Table</p>
+                        <div id="tableGrid" class="grid grid-cols-5 gap-2"></div>
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between items-center mb-2">
+                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Menu</p>
+                            <button onclick="toggleModal('menuEditor')" class="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded">Manage Menu</button>
+                        </div>
+                        <div id="menuGrid" class="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto pr-1"></div>
+                    </div>
+
+                    <div class="bg-slate-50 rounded-xl p-3 space-y-2 border-dashed border-2">
+                        <div id="summary" class="space-y-1 text-sm min-h-[20px]"></div>
+                        <div class="flex justify-between font-black text-lg border-t pt-2">
+                            <span>Total</span><span>₹<span id="total">0</span></span>
+                        </div>
+                    </div>
+
+                    <button onclick="placeOrder()" class="btn w-full bg-emerald-600 text-white py-4 rounded-xl font-bold shadow-emerald-200 shadow-lg">
+                        Confirm & Print
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <section id="orders" class="lg:col-span-8 grid md:grid-cols-2 gap-4 content-start"></section>
+
+    </main>
+
+    <div id="menuEditor" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl space-y-4">
+            <div class="flex justify-between items-center">
+                <h3 class="font-bold text-xl">Menu Management</h3>
+                <button onclick="toggleModal('menuEditor')" class="text-slate-400 text-2xl">×</button>
+            </div>
+            <div id="menuEditList" class="space-y-3 max-h-96 overflow-y-auto pr-2"></div>
+            <button onclick="addMenuItem()" class="w-full bg-slate-100 text-slate-900 py-3 rounded-xl font-bold border-2 border-dashed border-slate-300">+ Add New Item</button>
+            <button onclick="saveMenu(); toggleModal('menuEditor')" class="w-full bg-emerald-600 text-white py-3 rounded-xl font-bold">Save Changes</button>
+        </div>
+    </div>
+
+    <div id="orderEditor" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl space-y-4">
+            <h3 class="font-bold text-xl">Edit Order</h3>
+            <div id="editOrderContent" class="space-y-4"></div>
+            <div class="flex gap-2">
+                <button onclick="toggleModal('orderEditor')" class="flex-1 bg-slate-100 py-3 rounded-xl font-bold">Cancel</button>
+                <button onclick="saveOrderEdits()" class="flex-1 bg-emerald-600 text-white py-3 rounded-xl font-bold">Update Order</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /* ================= STATE & DATA ================= */
+        let MENU = JSON.parse(localStorage.getItem("menu")) || [
+            { id: 1, name: "Idli", price: 20 }, { id: 2, name: "Vada", price: 30 },
+            { id: 3, name: "Dosa", price: 50 }, { id: 4, name: "Tea", price: 15 }
+        ];
+        let orders = JSON.parse(localStorage.getItem("orders")) || [];
+        let filter = "all";
+        let current = { table: null, items: [], total: 0 };
+        let editingOrderId = null;
+
+        /* ================= INITIALIZATION ================= */
+        function init() {
+            renderTableGrid();
+            renderMenu();
+            renderOrders();
+            setInterval(renderOrders, 60000); // Auto-refresh "time ago"
+        }
+
+        /* ================= UI HELPERS ================= */
+        function toggleModal(id) { document.getElementById(id).classList.toggle("hidden"); }
+        
+        function toggleAccordion(id) {
+            const el = document.getElementById(id);
+            const icon = document.getElementById('accIcon');
+            el.classList.toggle('hidden');
+            icon.innerText = el.classList.contains('hidden') ? '▲' : '▼';
+        }
+
+        function timeAgo(date) {
+            const seconds = Math.floor((new Date() - date) / 1000);
+            if (seconds < 60) return "Just now";
+            const minutes = Math.floor(seconds / 60);
+            if (minutes < 60) return `${minutes}m ago`;
+            const hours = Math.floor(minutes / 60);
+            return `${hours}h ago`;
+        }
+
+        /* ================= CORE LOGIC ================= */
+        function renderTableGrid() {
+            const grid = document.getElementById("tableGrid");
+            grid.innerHTML = "";
+            for (let i = 1; i <= 15; i++) {
+                const btn = document.createElement("button");
+                btn.innerText = i;
+                btn.className = `p-2 rounded-lg font-bold border ${current.table == i ? 'bg-emerald-600 text-white' : 'bg-white text-slate-600'}`;
+                btn.onclick = () => { current.table = i; renderTableGrid(); };
+                grid.appendChild(btn);
+            }
+        }
+
+        function renderMenu() {
+            const g = document.getElementById("menuGrid");
+            g.innerHTML = "";
+            MENU.forEach(item => {
+                const b = document.createElement("button");
+                b.className = "flex flex-col items-center justify-center p-3 rounded-xl bg-white border-2 border-slate-100 hover:border-emerald-500 shadow-sm text-center";
+                b.innerHTML = `<span class="font-bold text-sm">${item.name}</span><span class="text-xs text-slate-500">₹${item.price}</span>`;
+                b.onclick = () => updateItemQty(item, 1);
+                g.appendChild(b);
+            });
+            renderMenuEditor();
+        }
+
+        function updateItemQty(item, delta) {
+            const existing = current.items.find(x => x.name === item.name);
+            if (existing) {
+                existing.qty += delta;
+                if (existing.qty <= 0) current.items = current.items.filter(x => x.name !== item.name);
+            } else if (delta > 0) {
+                current.items.push({ ...item, qty: 1 });
+            }
+            recalc();
+        }
+
+        function recalc() {
+            const sumBox = document.getElementById("summary");
+            sumBox.innerHTML = "";
+            current.total = current.items.reduce((acc, i) => {
+                const row = document.createElement("div");
+                row.className = "flex justify-between items-center bg-white p-2 rounded-lg shadow-sm border border-slate-100 mb-1";
+                row.innerHTML = `
+                    <span>${i.name} <span class="text-slate-400">×${i.qty}</span></span>
+                    <div class="flex gap-1">
+                        <button onclick="updateItemQty({name:'${i.name}'}, -1)" class="w-6 h-6 rounded bg-red-50 text-red-600 font-bold">-</button>
+                        <button onclick="updateItemQty({name:'${i.name}'}, 1)" class="w-6 h-6 rounded bg-emerald-50 text-emerald-600 font-bold">+</button>
+                    </div>
+                `;
+                sumBox.appendChild(row);
+                return acc + (i.price * i.qty);
+            }, 0);
+            document.getElementById("total").textContent = current.total;
+        }
+
+        function placeOrder() {
+            if (!current.table || !current.items.length) return alert("Select Table and Items");
+            const newOrder = {
+                id: Date.now(),
+                ...current,
+                status: "pending",
+                paid: false,
+                time: Date.now()
+            };
+            orders.unshift(newOrder);
+            saveData();
+            current = { table: null, items: [], total: 0 };
+            renderTableGrid(); recalc(); renderOrders();
+        }
+
+        /* ================= ORDERS DASHBOARD ================= */
+        function renderOrders() {
+            const box = document.getElementById("orders");
+            box.innerHTML = "";
+            const filtered = orders.filter(o => {
+                if (filter === "all") return true;
+                if (filter === "unpaid") return !o.paid;
+                return o.status === filter;
+            });
+
+            filtered.forEach(o => {
+                const statusColors = { pending: 'bg-amber-100 text-amber-700', preparing: 'bg-blue-100 text-blue-700', served: 'bg-emerald-100 text-emerald-700' };
+                const div = document.createElement("div");
+                div.className = "card-anim bg-white rounded-2xl p-5 border shadow-sm space-y-4";
+                div.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h4 class="font-black text-xl">Table ${o.table}</h4>
+                            <p class="text-[10px] text-slate-400 uppercase font-bold">${timeAgo(o.time)}</p>
+                        </div>
+                        <span class="px-2 py-1 rounded text-[10px] font-black uppercase ${statusColors[o.status]}">${o.status}</span>
+                    </div>
+                    <div class="text-sm text-slate-600 py-2 border-y border-dashed">
+                        ${o.items.map(i => `<div class="flex justify-between"><span>${i.name} × ${i.qty}</span><span>₹${i.qty * i.price}</span></div>`).join('')}
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="font-bold text-lg">₹${o.total}</span>
+                        <div class="flex gap-2">
+                            <button onclick="openOrderEdit(${o.id})" class="p-2 bg-slate-100 rounded-lg text-xs font-bold">Edit</button>
+                            <button onclick="togglePaid(${o.id})" class="px-3 py-1 rounded-lg text-xs font-bold ${o.paid ? 'bg-emerald-600 text-white' : 'bg-red-500 text-white'}">${o.paid ? 'Paid' : 'Unpaid'}</button>
+                            <button onclick="nextStatus(${o.id})" class="px-3 py-1 bg-slate-900 text-white rounded-lg text-xs font-bold">Next Stage</button>
+                        </div>
+                    </div>
+                `;
+                box.appendChild(div);
+            });
+        }
+
+        /* ================= EDITING SYSTEM ================= */
+        function openOrderEdit(id) {
+            editingOrderId = id;
+            const order = orders.find(o => o.id === id);
+            const content = document.getElementById("editOrderContent");
+            content.innerHTML = `
+                <div class="grid grid-cols-2 gap-2">
+                    ${MENU.map(m => `
+                        <button onclick="updateEditItem(${m.id})" class="p-2 border rounded text-xs text-left flex justify-between">
+                            ${m.name} <span class="text-emerald-600 font-bold">+</span>
+                        </button>
+                    `).join('')}
+                </div>
+                <div id="editItemList" class="space-y-2 border-t pt-2"></div>
+            `;
+            renderEditItemList(order);
+            toggleModal('orderEditor');
+        }
+
+        function renderEditItemList(order) {
+            const list = document.getElementById("editItemList");
+            list.innerHTML = order.items.map((item, idx) => `
+                <div class="flex justify-between items-center bg-slate-50 p-2 rounded">
+                    <span>${item.name}</span>
+                    <div class="flex items-center gap-2">
+                        <button onclick="modifyEditQty(${idx}, -1)" class="w-6 h-6 bg-white border rounded">-</button>
+                        <span class="font-bold">${item.qty}</span>
+                        <button onclick="modifyEditQty(${idx}, 1)" class="w-6 h-6 bg-white border rounded">+</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function modifyEditQty(idx, delta) {
+            const order = orders.find(o => o.id === editingOrderId);
+            order.items[idx].qty += delta;
+            if (order.items[idx].qty <= 0) order.items.splice(idx, 1);
+            order.total = order.items.reduce((a, b) => a + (b.price * b.qty), 0);
+            renderEditItemList(order);
+        }
+
+        function updateEditItem(menuId) {
+            const order = orders.find(o => o.id === editingOrderId);
+            const menuI = MENU.find(m => m.id === menuId);
+            const exist = order.items.find(i => i.name === menuI.name);
+            exist ? exist.qty++ : order.items.push({...menuI, qty: 1});
+            order.total = order.items.reduce((a, b) => a + (b.price * b.qty), 0);
+            renderEditItemList(order);
+        }
+
+        function saveOrderEdits() {
+            saveData();
+            renderOrders();
+            toggleModal('orderEditor');
+        }
+
+        /* ================= MENU EDITOR ================= */
+        function renderMenuEditor() {
+            const list = document.getElementById("menuEditList");
+            list.innerHTML = "";
+            MENU.forEach((m, i) => {
+                const d = document.createElement("div");
+                d.className = "flex gap-2 items-center bg-slate-50 p-2 rounded-xl";
+                d.innerHTML = `
+                    <input class="flex-1 bg-transparent font-bold outline-none" value="${m.name}" onchange="MENU[${i}].name=this.value">
+                    <input type="number" class="w-16 bg-white px-2 py-1 rounded border outline-none" value="${m.price}" onchange="MENU[${i}].price=Number(this.value)">
+                    <button onclick="MENU.splice(${i},1); renderMenuEditor()" class="w-8 h-8 text-red-500 font-bold">✕</button>
+                `;
+                list.appendChild(d);
+            });
+        }
+
+        function addMenuItem() {
+            MENU.push({ id: Date.now(), name: "New Item", price: 0 });
+            renderMenuEditor();
+        }
+
+        function saveMenu() {
+            saveData();
+            renderMenu();
+        }
+
+        function saveData() {
+            localStorage.setItem("orders", JSON.stringify(orders));
+            localStorage.setItem("menu", JSON.stringify(MENU));
+        }
+
+        function togglePaid(id) {
+            const o = orders.find(x => x.id === id);
+            o.paid = !o.paid;
+            saveData(); renderOrders();
+        }
+
+        function nextStatus(id) {
+            const o = orders.find(x => x.id === id);
+            const flow = { pending: 'preparing', preparing: 'served', served: 'served' };
+            o.status = flow[o.status];
+            saveData(); renderOrders();
+        }
+
+        /* ================= FILTER LOGIC ================= */
+        document.querySelectorAll(".filter").forEach(b => {
+            b.onclick = () => {
+                filter = b.dataset.filter;
+                document.querySelectorAll(".filter").forEach(x => {
+                    x.classList.replace("bg-slate-900", "bg-white");
+                    x.classList.replace("text-white", "text-slate-600");
+                });
+                b.classList.add("bg-slate-900", "text-white");
+                renderOrders();
+            };
+        });
+
+        init();
+    </script>
+</body>
+</html>
