@@ -747,6 +747,7 @@
         function renderMenuEditor() {
             document.getElementById("menuEditList").innerHTML = MENU.map((m, i) => `
                 <div class="flex gap-2 items-center bg-white p-2 rounded border border-slate-100 mb-2" draggable="true" data-index="${i}" ondragstart="dragStart(event)" ondragover="dragOver(event)" ondrop="drop(event)">
+                <span class="cursor-grab text-slate-400 hover:text-slate-600 touch-manipulation"><i class="ri-menu-line text-lg"></i></span>
                 <input class="flex-1 font-bold outline-none text-sm" value="${m.name}" onchange="MENU[${i}].name=this.value">
                 <input type="number" class="w-16 bg-slate-50 px-2 py-1 rounded border outline-none text-sm" value="${m.price}" onchange="MENU[${i}].price=Number(this.value)">
                 <button onclick="MENU.splice(${i},1); renderMenuEditor()" class="text-red-500"><i class="ri-delete-bin-line"></i></button>
