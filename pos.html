@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Snack Center – Order Manager Pro</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+
+    <style>
+ 
+
+:root {
+        --bg: #f8fafc;
+        --surface: #ffffff;
+    }
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: var(--bg);
+            color: #1e293b;
+        }
+
+        /* Smooth Animations */
+        .card-enter {
+            animation: slideUp 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+@keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Utilities */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .tab-active {
+            background-color: #0f172a;
+            color: white;
+        }
+        .tab-inactive {
+            background-color: white;
+            color: #64748b;
+            border: 1px solid #e2e8f0;
+        }
+
+        /* Dashboard Charts */
+        .bar-container {
+            display: flex;
+            align-items: flex-end;
+            gap: 4px;
+            height: 60px;
+        }
+        .bar {
+            background: #10b981;
+            width: 100%;
+            border-radius: 2px;
+            transition: height 0.3s;
+            opacity: 0.7;
+        }
+        .bar:hover {
+            opacity: 1;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen pb-24 md:pb-10">
+
+    <nav class="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-200 px-2 sm:px-4 py-3 flex justify-between items-center shadow-sm">
+        <div class="flex items-center gap-2">
+            <div class="bg-emerald-600 text-white p-1.5 rounded-lg">
+                <i class="ri-store-2-fill text-xl leading-none"></i>
+            </div>
+            <div class="font-black text-lg tracking-tight text-slate-900">
+                SNACK<span class="text-emerald-600">CENTER</span>
+            </div>
+        </div>
+        <div class="flex gap-1 bg-slate-100 p-1 rounded-lg">
+            <button onclick="switchView('pos')" id="nav-pos" class="px-2 sm:px-4 py-1 sm:py-1.5 rounded-md text-sm font-bold bg-white shadow-sm text-slate-900 transition-all flex items-center gap-2">
+                <i class="ri-macbook-line"></i> POS
+            </button>
+            <button onclick="switchView('dash')" id="nav-dash" class="px-2 sm:px-4 py-1 sm:py-1.5 rounded-md text-sm font-bold text-slate-500 hover:text-slate-900 transition-all flex items-center gap-2">
+                <i class="ri-pie-chart-2-line"></i> Insights
+            </button>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl p-2 sm:p-4">
+
+        <div id="view-pos" class="grid lg:grid-cols-12 gap-6">
+
+            <section class="lg:col-span-4 space-y-4">
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <button onclick="toggleAccordion('orderForm')" class="w-full flex justify-between items-center p-4 bg-slate-50 border-b border-slate-200">
+                        <span class="font-bold text-slate-800 flex items-center gap-2"><i class="ri-add-circle-fill text-emerald-600"></i> New Order</span>
+                        <i id="accIcon" class="ri-arrow-down-s-line text-xl text-slate-400"></i>
+                    </button>
+
+                    <div id="orderForm" class="p-4 space-y-4">
+                        <div>
+                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-1">
+                                <i class="ri-table-line"></i> Select Table
+                            </p>
+                            <div id="tableGrid" class="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-2"></div>
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between items-center mb-2">
+                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
+                                    <i class="ri-restaurant-line"></i> Menu Items
+                                </p>
+                                <button onclick="toggleModal('menuEditor')" class="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded hover:bg-emerald-100"><i class="ri-edit-line"></i> Edit</button>
+                            </div>
+                            <div id="menuGrid" class="grid grid-cols-2 gap-2 max-h-56 overflow-y-auto pr-1"></div>
+                        </div>
+
+                        <div class="bg-slate-50 rounded-lg p-3 border border-slate-200">
+                            <div id="summary" class="space-y-2 text-sm min-h-[20px]"></div>
+
+                            <div class="flex items-center justify-between py-3 border-t border-slate-200 mt-2">
+                                <span class="text-sm font-bold text-slate-700 flex items-center gap-2"><i class="ri-takeaway-line"></i> Parcel Order</span>
+                                <label class="inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="parcelToggle" class="sr-only peer">
+                                    <div class="relative w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-slate-900"></div>
+                                </label>
+                            </div>
+
+                            <div class="flex justify-between items-center font-black text-xl pt-2 border-t border-slate-300">
+                                <span>Total</span>
+                                <span class="text-emerald-700">₹<span id="total">0</span></span>
+                            </div>
+                        </div>
+
+                        <button onclick="placeOrder()" class="w-full bg-slate-900 text-white py-3.5 rounded-lg font-bold shadow-lg shadow-slate-200 hover:bg-slate-800 active:scale-[0.98] transition-all flex justify-center items-center gap-2">
+                            <i class="ri-check-double-line"></i> Place Order
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <section class="lg:col-span-8 space-y-4 overflow-scroll no-scrollbar">
+
+                <div class="bg-slate-900 rounded-xl p-5 text-white shadow-lg flex justify-between items-center relative overflow-hidden">
+                    <div class="absolute right-0 top-0 opacity-10">
+                        <i class="ri-wallet-3-fill text-9xl"></i>
+                    </div>
+                    <div class="relative z-10">
+                        <p class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">
+                            Today's Collection (Paid)
+                        </p>
+                        <h2 class="text-4xl font-black tracking-tight">₹<span id="todayCollectionDisplay">0</span></h2>
+                    </div>
+                    <div class="relative z-10 text-right">
+                        <p class="text-slate-400 text-xs font-bold uppercase mb-1">
+                            Active
+                        </p>
+                        <h2 class="text-2xl font-bold bg-slate-800 px-3 py-1 rounded-lg" id="activeCountDisplay">0</h2>
+                    </div>
+                </div>
+
+                <div class="flex w-full gap-2 overflow-scroll py-1">
+                    <button onclick="setFilter('all')" id="filter-all" class="tab-active px-2 sm:px-4 py-1 sm:py-1.5 rounded-full text-sm font-bold shadow-sm whitespace-nowrap transition-colors border border-transparent">All</button>
+                    <button onclick="setFilter('pending')" id="filter-pending" class="tab-inactive px-2 sm:px-4 py-1 sm:py-1.5 rounded-full text-sm font-bold whitespace-nowrap transition-colors">Pending</button>
+                    <button onclick="setFilter('preparing')" id="filter-preparing" class="tab-inactive px-2 sm:px-4 py-1 sm:py-1.5 rounded-full text-sm font-bold whitespace-nowrap transition-colors">Preparing</button>
+                    <button onclick="setFilter('served')" id="filter-served" class="tab-inactive px-2 sm:px-4 py-1 sm:py-1.5 rounded-full text-sm font-bold whitespace-nowrap transition-colors">Served</button>
+                    <button onclick="setFilter('unpaid')" id="filter-unpaid" class="tab-inactive px-2 sm:px-4 py-1 sm:py-1.5 rounded-full text-sm font-bold whitespace-nowrap transition-colors text-red-600 border-red-200">Unpaid</button>
+                </div>
+
+                <div id="orders" class="grid md:grid-cols-2 gap-4"></div>
+            </section>
+        </div>
+
+        <div id="view-dash" class="hidden space-y-6">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <h2 class="text-2xl font-black text-slate-800 flex items-center gap-2"><i class="ri-bar-chart-grouped-fill text-emerald-600"></i> Analytics</h2>
+                <div class="flex items-center gap-2 bg-white p-2 rounded-lg border shadow-sm">
+                    <i class="ri-calendar-line text-slate-400"></i>
+                    <input type="date" id="dashDate" class="outline-none text-sm font-bold text-slate-700 bg-transparent" onchange="renderDashboard()">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="bg-white p-3 sm:p-5 rounded-xl border border-slate-200 shadow-sm">
+                    <p class="text-slate-400 text-xs font-bold uppercase mb-1">
+                        Selected Date
+                    </p>
+                    <h3 class="text-2xl font-black text-emerald-600">₹<span id="dashSelected">0</span></h3>
+                </div>
+                <div class="bg-white p-3 sm:p-5 rounded-xl border border-slate-200 shadow-sm">
+                    <p class="text-slate-400 text-xs font-bold uppercase mb-1">
+                        Lifetime Sales
+                    </p>
+                    <h3 class="text-2xl font-black text-slate-800">₹<span id="dashTotal">0</span></h3>
+                </div>
+                <div class="bg-white p-3 sm:p-5 rounded-xl border border-slate-200 shadow-sm">
+                    <p class="text-slate-400 text-xs font-bold uppercase mb-1">
+                        Orders Count
+                    </p>
+                    <h3 class="text-2xl font-black text-blue-600"><span id="dashCount">0</span></h3>
+                </div>
+                <div class="bg-white p-3 sm:p-5 rounded-xl border border-slate-200 shadow-sm">
+                    <p class="text-slate-400 text-xs font-bold uppercase mb-1">
+                        Avg Order Value
+                    </p>
+                    <h3 class="text-2xl font-black text-purple-600">₹<span id="dashAvg">0</span></h3>
+                </div>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-6">
+                <div class="bg-white p-4 sm:p-6 rounded-xl border border-slate-200 shadow-sm">
+                    <h3 class="font-bold text-lg mb-4 flex items-center gap-2"><i class="ri-fire-line text-orange-500"></i> Top Items</h3>
+                    <div id="trendingGrid" class="space-y-4"></div>
+                </div>
+
+                <div class="space-y-6">
+                    <div class="bg-white p-4 sm:p-6 rounded-xl border border-slate-200 shadow-sm">
+                        <h3 class="font-bold text-lg mb-4 flex items-center gap-2"><i class="ri-time-line text-blue-500"></i> Peak Hours (Activity)</h3>
+                        <div id="peakChart" class="bar-container border-b border-slate-200 pb-1"></div>
+                        <div class="flex justify-between text-[10px] text-slate-400 mt-1 font-bold">
+                            <span>8 AM</span><span>12 PM</span><span>4 PM</span><span>8 PM</span><span>12 AM</span>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-4 sm:p-6 rounded-xl border border-slate-200 shadow-sm">
+                        <h3 class="font-bold text-lg mb-4 flex items-center gap-2"><i class="ri-layout-grid-line text-purple-500"></i> Most Busy Tables</h3>
+                        <div id="tableStats" class="flex flex-wrap gap-2"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <div id="menuEditor" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-xl shadow-2xl flex flex-col max-h-[90vh]">
+            <div class="p-4 border-b flex justify-between items-center">
+                <h3 class="font-bold text-lg">Edit Menu</h3>
+                <button onclick="toggleModal('menuEditor')" class="text-2xl text-slate-400 hover:text-red-500"><i class="ri-close-circle-fill"></i></button>
+            </div>
+            <div id="menuEditList" class="p-4 space-y-2 overflow-y-auto flex-1 bg-slate-50"></div>
+            <div class="p-4 border-t space-y-2 bg-white rounded-b-xl">
+                <button onclick="addMenuItem()" class="w-full py-2.5 rounded-lg border-2 border-dashed border-slate-300 font-bold text-slate-500 hover:bg-slate-50">+ Add Item</button>
+                <button onclick="saveMenu(); toggleModal('menuEditor')" class="w-full bg-emerald-600 text-white py-3 rounded-lg font-bold hover:bg-emerald-700">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="orderEditor" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-xl shadow-2xl flex flex-col max-h-[85vh]">
+            <div class="p-4 border-b">
+                <h3 class="font-bold text-lg">Modify Order</h3>
+            </div>
+            <div class="p-4 overflow-y-auto space-y-4 bg-slate-50">
+                <div id="editOrderContent" class="space-y-4"></div>
+                <div class="flex items-center justify-between p-3 bg-white rounded-lg border">
+                    <span class="text-sm font-bold text-slate-600">Parcel Order?</span>
+                    <input type="checkbox" id="editParcelToggle" class="w-5 h-5 text-emerald-600 focus:ring-emerald-500 rounded">
+                </div>
+            </div>
+            <div class="p-4 border-t flex gap-3 bg-white rounded-b-xl">
+                <button onclick="toggleModal('orderEditor')" class="flex-1 bg-slate-100 py-3 rounded-lg font-bold text-slate-600">Cancel</button>
+                <button onclick="saveOrderEdits()" class="flex-1 bg-emerald-600 text-white py-3 rounded-lg font-bold">Update</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="waModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-sm rounded-xl p-6 shadow-2xl space-y-4 card-enter">
+            <div class="text-center">
+                <div class="w-14 h-14 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-3 text-3xl">
+                    <i class="ri-whatsapp-fill"></i>
+                </div>
+                <h3 class="font-bold text-xl">Send Receipt</h3>
+            </div>
+            <div class="space-y-3">
+                <div class="relative">
+                    <i class="ri-user-smile-line absolute left-3 top-3 text-slate-400"></i>
+                    <input id="waName" type="text" placeholder="Customer Name" class="w-full pl-10 bg-slate-50 border border-slate-200 p-3 rounded-lg font-semibold outline-none focus:border-green-500 transition-colors">
+                </div>
+                <div class="relative">
+                    <i class="ri-phone-line absolute left-3 top-3 text-slate-400"></i>
+                    <input id="waPhone" type="tel" placeholder="Phone Number" class="w-full pl-10 bg-slate-50 border border-slate-200 p-3 rounded-lg font-semibold outline-none focus:border-green-500 transition-colors">
+                </div>
+            </div>
+            <button onclick="sendWhatsApp()" class="w-full bg-[#25D366] text-white py-3.5 rounded-lg font-bold hover:bg-green-600 transition shadow-lg shadow-green-100 flex items-center justify-center gap-2">
+                <i class="ri-send-plane-fill"></i> Send Message
+            </button>
+            <button onclick="toggleModal('waModal')" class="w-full text-slate-400 text-sm font-bold py-2">Close</button>
+        </div>
+    </div>
+
+    <script>
+        /* ================= STATE ================= */
+        let MENU = JSON.parse(localStorage.getItem("menu")) || [{
+            id: 1,
+            name: "Sada Dosa",
+            price: 50
+        }, {
+            id: 2,
+            name: "Masala Dosa",
+            price: 70
+        },
+            {
+                id: 3,
+                name: "Idli Sambar",
+                price: 40
+            }, {
+                id: 4,
+                name: "Tea",
+                price: 15
+            }];
+        let orders = JSON.parse(localStorage.getItem("orders")) || [];
+        let filter = "all";
+        let current = {
+            table: null,
+            items: [],
+            total: 0
+        };
+        let activeWaId = null;
+        let editingOrderId = null;
+
+        /* ================= INITIALIZATION ================= */
+        function init() {
+            // Set Dashboard Date to Today by default
+            document.getElementById('dashDate').valueAsDate = new Date();
+
+            renderTableGrid();
+            renderMenu();
+            renderOrders();
+            renderDashboard();
+            updateTopBanner();
+
+            // Lightweight interval: Only updates text, doesn't re-render DOM
+            setInterval(updateTimeText, 60000);
+        }
+
+        /* ================= UI CONTROLLERS ================= */
+        function switchView(view) {
+            document.getElementById('view-pos').classList.add('hidden');
+            document.getElementById('view-dash').classList.add('hidden');
+            document.getElementById('nav-pos').className = "px-4 py-1.5 rounded-md text-sm font-bold text-slate-500 hover:text-slate-900 transition-all flex items-center gap-2";
+            document.getElementById('nav-dash').className = "px-4 py-1.5 rounded-md text-sm font-bold text-slate-500 hover:text-slate-900 transition-all flex items-center gap-2";
+
+            document.getElementById(`view-${view}`).classList.remove('hidden');
+            document.getElementById(`nav-${view}`).className = "px-4 py-1.5 rounded-md text-sm font-bold bg-white shadow-sm text-slate-900 transition-all flex items-center gap-2";
+
+            if (view === 'dash') renderDashboard();
+        }
+
+        function setFilter(type) {
+            filter = type;
+            document.querySelectorAll('#orders > div').forEach(el => el.remove()); // Clear DOM first
+            // Reset Buttons
+            const buttons = ['all',
+                'pending',
+                'preparing',
+                'served',
+                'unpaid'];
+            buttons.forEach(b => {
+                const btn = document.getElementById(`filter-${b}`);
+                btn.className = `tab-inactive px-4 py-1.5 rounded-full text-sm font-bold whitespace-nowrap transition-colors ${b === 'unpaid'?'text-red-600 border-red-200': ''}`;
+            });
+            // Activate
+            document.getElementById(`filter-${type}`).className = `tab-active px-4 py-1.5 rounded-full text-sm font-bold shadow-sm whitespace-nowrap transition-colors border-transparent`;
+            renderOrders();
+        }
+
+        function toggleModal(id) {
+            document.getElementById(id).classList.toggle("hidden");
+        }
+        function toggleAccordion(id) {
+            const el = document.getElementById(id);
+            const icon = document.getElementById('accIcon');
+            el.classList.toggle('hidden');
+            icon.className = el.classList.contains('hidden') ? 'ri-arrow-down-s-line text-xl text-slate-400': 'ri-arrow-up-s-line text-xl text-slate-400';
+        }
+
+        /* ================= POS LOGIC ================= */
+        function renderTableGrid() {
+            const grid = document.getElementById("tableGrid");
+            grid.innerHTML = "";
+            for (let i = 1; i <= 10; i++) {
+                const btn = document.createElement("button");
+                btn.innerHTML = i;
+                btn.className = `h-10 rounded-lg font-bold border transition-all ${current.table == i ? 'bg-slate-900 text-white border-slate-900': 'bg-white text-slate-600 hover:bg-slate-50'}`;
+                btn.onclick = () => {
+                    current.table = i; renderTableGrid();
+                };
+                grid.appendChild(btn);
+            }
+        }
+
+        function renderMenu() {
+            const g = document.getElementById("menuGrid");
+            g.innerHTML = "";
+            MENU.forEach(item => {
+                const b = document.createElement("button");
+                b.className = "text-left p-3 rounded-lg bg-white border border-slate-100 hover:border-emerald-500 shadow-sm transition-all group";
+                b.innerHTML = `<div class="font-bold text-sm text-slate-700 group-hover:text-emerald-700">${item.name}</div><div class="text-xs text-slate-400 font-semibold group-hover:text-emerald-500">₹${item.price}</div>`;
+                b.onclick = () => updateItemQty(item, 1);
+                g.appendChild(b);
+            });
+            renderMenuEditor();
+        }
+
+        function updateItemQty(item, delta) {
+            const existing = current.items.find(x => x.name === item.name);
+            if (existing) {
+                existing.qty += delta;
+                if (existing.qty <= 0) current.items = current.items.filter(x => x.name !== item.name);
+            } else if (delta > 0) {
+                current.items.push({
+                    ...item, qty: 1
+                });
+            }
+            recalc();
+        }
+
+        function recalc() {
+            const sumBox = document.getElementById("summary");
+            sumBox.innerHTML = "";
+            current.total = current.items.reduce((acc, i) => {
+                const row = document.createElement("div");
+                row.className = "flex justify-between items-center text-xs font-medium text-slate-600";
+                row.innerHTML = `
+                <span>${i.name} × ${i.qty}</span>
+                <div class="flex items-center gap-2">
+                <span class="font-bold text-slate-800">₹${i.price * i.qty}</span>
+                <button onclick="updateItemQty({name:'${i.name}'}, -1)" class="w-5 h-5 flex items-center justify-center bg-red-50 text-red-500 rounded hover:bg-red-100 transition"><i class="ri-subtract-line"></i></button>
+                </div>
+                `;
+                sumBox.appendChild(row);
+                return acc + (i.price * i.qty);
+            }, 0);
+            document.getElementById("total").textContent = current.total;
+        }
+
+        function placeOrder() {
+            const parcelCheckbox = document.getElementById('parcelToggle');
+            if (!current.table || !current.items.length) return alert("Select Table and Items");
+
+            const newOrder = {
+                id: Date.now(),
+                ...current,
+                parcel: parcelCheckbox.checked,
+                status: "pending",
+                paid: false,
+                time: Date.now()
+            };
+            orders.unshift(newOrder);
+            saveData();
+
+            // Reset
+            current = {
+                table: null,
+                items: [],
+                total: 0
+            };
+            parcelCheckbox.checked = false;
+            renderTableGrid(); recalc(); renderOrders(); updateTopBanner();
+        }
+
+        /* ================= RENDER ORDERS (OPTIMIZED) ================= */
+        function renderOrders() {
+            const box = document.getElementById("orders");
+            box.innerHTML = "";
+
+            // OPTIMIZATION: If filter is 'all', only take first 50 to prevent lag
+            let filtered = orders.filter(o => {
+                if (filter === "all") return true;
+                if (filter === "unpaid") return !o.paid;
+                return o.status === filter;
+            });
+
+            if (filter === 'all') filtered = filtered.slice(0, 50);
+
+            filtered.forEach(o => {
+                const div = document.createElement("div");
+                div.className = `card-enter bg-white rounded-xl p-4 border-l-2 ${o.parcel ? 'border-amber-400' : 'border-sky-400'} shadow-sm space-y-3 relative overflow-hidden group`;
+
+                // Status Badge Logic
+                const statusConfig = {
+                    pending: {
+                        color: 'text-amber-600 bg-amber-50 border-amber-100', icon: 'ri-loader-4-line'
+                    },
+                    preparing: {
+                        color: 'text-blue-600 bg-blue-50 border-blue-100', icon: 'ri-fire-line'
+                    },
+                    served: {
+                        color: 'text-emerald-600 bg-emerald-50 border-emerald-100', icon: 'ri-check-line'
+                    }
+                };
+                const sc = statusConfig[o.status] || statusConfig.pending;
+
+                div.innerHTML = `
+                <div class="flex justify-between items-start border-amber-100 ">
+                <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-lg bg-slate-900 text-white flex flex-col items-center justify-center leading-none">
+                <span class="text-[10px] font-bold opacity-70">TAB</span>
+                <span class="text-lg font-black">${o.table}</span>
+                </div>
+                <div>
+                <div class="flex items-center gap-2">
+                <span class="text-xs font-bold text-slate-400 time-ago" data-time="${o.time}">${timeAgo(o.time)}</span>
+                ${o.parcel ? '<span class="px-1.5 py-0.5 bg-slate-100 border border-slate-200 text-[10px] font-bold text-slate-600 rounded uppercase">Parcel</span>': ''}
+                </div>
+                </div>
+                </div>
+
+                <div class="flex gap-1">
+                <button onclick="nextStatus(${o.id})" class="px-2 py-1 rounded border text-[10px] font-bold uppercase flex items-center gap-1 transition-colors ${sc.color}">
+                <i class="${sc.icon}"></i> ${o.status}
+                </button>
+                <button onclick="togglePaid(${o.id})" class="px-2 py-1 rounded border text-[10px] font-bold uppercase transition-colors ${o.paid ? 'bg-emerald-600 text-white border-emerald-600': 'bg-white text-red-500 border-red-200'}">
+                ${o.paid ? 'PAID': 'UNPAID'}
+                </button>
+                </div>
+                </div>
+
+                <div class="text-sm text-slate-600 py-2 border-y border-dashed border-slate-200 space-y-1">
+                ${o.items.map(i => `<div class="flex justify-between"><span>${i.name} <span class="text-slate-400 text-xs">x${i.qty}</span></span><span class="font-bold">₹${i.qty * i.price}</span></div>`).join('')}
+                </div>
+
+                <div class="flex justify-between items-center pt-1">
+                <span class="font-black text-xl text-slate-800">₹${o.total}</span>
+                <div class="flex gap-2">
+                <button onclick="openWaModal(${o.id})" class="w-9 h-9 flex items-center justify-center bg-green-50 text-[#25D366] rounded-lg hover:bg-green-100 transition shadow-sm border border-green-100">
+                <i class="ri-whatsapp-line text-lg"></i>
+                </button>
+                <button onclick="editOrder(${o.id})" class="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded-lg text-xs font-bold hover:bg-slate-50 transition">
+                <i class="ri-edit-line"></i> Edit
+                </button>
+                </div>
+                </div>
+                `;
+                box.appendChild(div);
+            });
+        }
+
+        // Optimized Time Updater (Does not re-render DOM)
+        function updateTimeText() {
+            document.querySelectorAll('.time-ago').forEach(el => {
+                const ts = parseInt(el.dataset.time);
+                el.innerText = timeAgo(ts);
+            });
+        }
+
+        /* ================= DASHBOARD ANALYTICS ================= */
+        function renderDashboard() {
+            const dateInput = document.getElementById('dashDate').valueAsDate || new Date();
+            const dateStr = dateInput.toDateString();
+
+            let selectedTotal = 0,
+            lifetime = 0,
+            count = 0;
+            let itemCounts = {};
+            let hourCounts = new Array(24).fill(0);
+            let tableCounts = {};
+
+            orders.forEach(o => {
+                if (!o.paid) return;
+
+                lifetime += o.total;
+                const oDate = new Date(o.time);
+
+                // Matches selected date?
+                if (oDate.toDateString() === dateStr) {
+                    selectedTotal += o.total;
+                    count++;
+
+                    // Peak Hours
+                    hourCounts[oDate.getHours()]++;
+
+                    // Table Stats
+                    tableCounts[o.table] = (tableCounts[o.table] || 0) + 1;
+
+                    // Items
+                    o.items.forEach(i => {
+                        itemCounts[i.name] = (itemCounts[i.name] || 0) + i.qty;
+                    });
+                }
+            });
+
+            // Update Cards
+            document.getElementById('dashSelected').innerText = selectedTotal;
+            document.getElementById('dashTotal').innerText = lifetime;
+            document.getElementById('dashCount').innerText = count;
+            document.getElementById('dashAvg').innerText = count ? Math.round(selectedTotal / count): 0;
+
+            // Render Trending
+            const sortedItems = Object.entries(itemCounts).sort((a, b) => b[1] - a[1]).slice(0,
+                5);
+            const trendGrid = document.getElementById('trendingGrid');
+            trendGrid.innerHTML = "";
+            if (sortedItems.length === 0) trendGrid.innerHTML = "<p class='text-slate-400 text-sm'>No sales data for this date.</p>";
+
+            sortedItems.forEach(([name, qty]) => {
+                const max = sortedItems[0][1];
+                const pct = (qty / max) * 100;
+                trendGrid.innerHTML += `
+                <div>
+                <div class="flex justify-between text-xs font-bold mb-1"><span>${name}</span><span class="text-emerald-600">${qty} sold</span></div>
+                <div class="h-2 bg-slate-100 rounded-full overflow-hidden"><div class="h-full bg-emerald-500 rounded-full" style="width:${pct}%"></div></div>
+                </div>`;
+            });
+
+            // Render Peak Hours Chart
+            const peakContainer = document.getElementById('peakChart');
+            peakContainer.innerHTML = "";
+            const maxHour = Math.max(...hourCounts) || 1;
+            hourCounts.forEach(val => {
+                const h = (val / maxHour) * 100;
+                const bar = document.createElement('div');
+                bar.className = 'bar';
+                bar.style.height = `${h > 0 ? h: 5}%`; // Min height for visibility
+                bar.style.backgroundColor = h > 0 ? '#10b981': '#f1f5f9';
+                peakContainer.appendChild(bar);
+            });
+
+            // Render Table Stats
+            const tableContainer = document.getElementById('tableStats');
+            tableContainer.innerHTML = "";
+            const sortedTables = Object.entries(tableCounts).sort((a, b) => b[1] - a[1]).slice(0, 6);
+            if (sortedTables.length === 0) tableContainer.innerHTML = "<p class='text-slate-400 text-sm'>No data.</p>";
+            sortedTables.forEach(([tbl, c]) => {
+                tableContainer.innerHTML += `<div class="bg-slate-100 px-3 py-1.5 rounded text-xs font-bold">T-${tbl}: <span class="text-emerald-600">${c}</span></div>`;
+            });
+        }
+
+        /* ================= WHATSAPP ================= */
+        function openWaModal(id) {
+            activeWaId = id;
+            document.getElementById('waName').value = "";
+            document.getElementById('waPhone').value = "";
+            toggleModal('waModal');
+        }
+
+        function sendWhatsApp() {
+            const name = document.getElementById('waName').value || 'Customer';
+            const phone = document.getElementById('waPhone').value;
+            if (!phone) return alert("Please enter phone number");
+
+            const o = orders.find(x => x.id === activeWaId);
+            const itemsList = o.items.map(i => `▫️ ${i.name} x ${i.qty}  (₹${i.price*i.qty})`).join('%0A');
+
+            const msg = `*🧾 RECEIPT: SNACK CENTER*%0A%0A` +
+            `👤 *${name}* |  🍽️ Table: ${o.table}%0A` +
+            `📅 ${new Date(o.time).toLocaleString()}%0A%0A` +
+            `*ORDER SUMMARY*:%0A${itemsList}%0A` +
+            `--------------------------------%0A` +
+            `💵 *TOTAL: ₹${o.total}* ${o.paid ? '✅ PAID': '❌ UNPAID'}%0A` +
+            `${o.parcel ? '📦 Takeaway Order': ''}%0A` +
+            `--------------------------------%0A` +
+            `_Thank you for visiting!_`;
+
+            window.open(`https://wa.me/91${phone}?text=${msg}`, '_blank');
+            toggleModal('waModal');
+        }
+
+        /* ================= HELPERS & DATA ================= */
+        function updateTopBanner() {
+            const todayStr = new Date().toDateString();
+            const paidToday = orders.filter(o => new Date(o.time).toDateString() === todayStr && o.paid);
+            document.getElementById("todayCollectionDisplay").innerText = paidToday.reduce((acc, o) => acc + o.total, 0);
+            document.getElementById("activeCountDisplay").innerText = orders.filter(o => o.status !== 'served' && !o.paid).length;
+        }
+
+        function timeAgo(date) {
+            const sec = Math.floor((new Date() - date) / 1000);
+            if (sec < 60) return "Just now";
+            const min = Math.floor(sec / 60);
+            if (min < 60) return `${min}m ago`;
+            return `${Math.floor(min / 60)}h ago`;
+        }
+
+        function nextStatus(id) {
+            const o = orders.find(x => x.id === id);
+            const flow = {
+                pending: 'preparing',
+                preparing: 'served',
+                served: 'served'
+            };
+            o.status = flow[o.status];
+            saveData(); renderOrders();
+        }
+
+        function togglePaid(id) {
+            const o = orders.find(x => x.id === id);
+            o.paid = !o.paid;
+            saveData(); renderOrders(); updateTopBanner();
+        }
+
+        // Edit Order Logic
+        function editOrder(id) {
+            editingOrderId = id;
+            const order = orders.find(o => o.id === id);
+            document.getElementById("editOrderContent").innerHTML = `
+            <div class="grid grid-cols-2 gap-2 mb-3">
+            ${MENU.map(m => `<button onclick="editModalAddItem(${m.id})" class="text-xs p-2 bg-white border rounded hover:border-emerald-500 transition">${m.name}</button>`).join('')}
+            </div>
+            <div id="modalItemsList" class="space-y-2"></div>`;
+            document.getElementById('editParcelToggle').checked = order.parcel || false;
+            renderEditList(order);
+            toggleModal('orderEditor');
+        }
+
+        function renderEditList(order) {
+            document.getElementById("modalItemsList").innerHTML = order.items.map((item, idx) => `
+                <div class="flex justify-between items-center bg-white p-2 rounded border text-sm">
+                <span class="font-bold">${item.name}</span>
+                <div class="flex items-center gap-2">
+                <button onclick="editModalChangeQty(${idx}, -1)" class="w-6 h-6 bg-slate-100 rounded text-slate-600">-</button>
+                <span class="font-bold w-4 text-center">${item.qty}</span>
+                <button onclick="editModalChangeQty(${idx}, 1)" class="w-6 h-6 bg-slate-100 rounded text-slate-600">+</button>
+                </div>
+                </div>`).join('');
+        }
+        function editModalChangeQty(idx, d) {
+            const o = orders.find(x => x.id === editingOrderId);
+            o.items[idx].qty += d;
+            if (o.items[idx].qty <= 0) o.items.splice(idx, 1);
+            renderEditList(o);
+        }
+        function editModalAddItem(id) {
+            const o = orders.find(x => x.id === editingOrderId);
+            const item = MENU.find(m => m.id === id);
+            const exist = o.items.find(i => i.name === item.name);
+            exist ? exist.qty++: o.items.push({
+                ...item, qty: 1
+            });
+            renderEditList(o);
+        }
+        function saveOrderEdits() {
+            const o = orders.find(x => x.id === editingOrderId);
+            o.total = o.items.reduce((a, b) => a+(b.price*b.qty), 0);
+            o.parcel = document.getElementById('editParcelToggle').checked;
+            saveData(); renderOrders(); updateTopBanner(); toggleModal('orderEditor');
+        }
+
+        // Menu Logic
+        function renderMenuEditor() {
+            document.getElementById("menuEditList").innerHTML = MENU.map((m, i) => `
+                <div class="flex gap-2 items-center bg-white p-2 rounded border border-slate-100 mb-2" draggable="true" data-index="${i}" ondragstart="dragStart(event)" ondragover="dragOver(event)" ondrop="drop(event)">
+                <input class="flex-1 font-bold outline-none text-sm" value="${m.name}" onchange="MENU[${i}].name=this.value">
+                <input type="number" class="w-16 bg-slate-50 px-2 py-1 rounded border outline-none text-sm" value="${m.price}" onchange="MENU[${i}].price=Number(this.value)">
+                <button onclick="MENU.splice(${i},1); renderMenuEditor()" class="text-red-500"><i class="ri-delete-bin-line"></i></button>
+                </div>`).join('');
+        }
+
+        let draggedIndex = null;
+
+        function dragStart(event) {
+            draggedIndex = parseInt(event.target.dataset.index);
+            event.dataTransfer.effectAllowed = 'move';
+        }
+
+        function dragOver(event) {
+            event.preventDefault();
+            event.dataTransfer.dropEffect = 'move';
+        }
+
+        function drop(event) {
+            event.preventDefault();
+            const targetIndex = parseInt(event.target.closest('[data-index]').dataset.index);
+            if (draggedIndex !== null && draggedIndex !== targetIndex) {
+                const draggedItem = MENU.splice(draggedIndex, 1)[0];
+                MENU.splice(targetIndex, 0, draggedItem);
+                renderMenuEditor();
+            }
+            draggedIndex = null;
+        }
+
+        function addMenuItem() {
+            MENU.push({
+                id: Date.now(), name: "New Item", price: 0
+            }); renderMenuEditor();
+        }
+        function saveMenu() {
+            saveData(); renderMenu();
+        }
+
+        function saveData() {
+            localStorage.setItem("orders", JSON.stringify(orders)); localStorage.setItem("menu", JSON.stringify(MENU));
+        }
+
+        init();
+    </script>
+</body>
+</html>
