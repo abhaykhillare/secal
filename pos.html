@@ -746,7 +746,7 @@
         // Menu Logic
         function renderMenuEditor() {
             document.getElementById("menuEditList").innerHTML = MENU.map((m, i) => `
-                <div class="flex gap-2 items-center bg-white p-2 rounded border border-slate-100 mb-2" draggable="true" data-index="${i}" ondragstart="dragStart(event)" ondragover="dragOver(event)" ondrop="drop(event)">
+                <div class="flex gap-2 items-center bg-white p-2 rounded border border-slate-100 mb-2" draggable="true" data-index="${i}" ondragstart="dragStart(event)" ondragover="dragOver(event)" ondrop="drop(event)" ontouchstart="touchStart(event, ${i})" ontouchmove="touchMove(event)" ontouchend="touchEnd(event)">
                 <span class="cursor-grab text-slate-400 hover:text-slate-600 touch-manipulation"><i class="ri-menu-line text-lg"></i></span>
                 <input class="flex-1 font-bold outline-none text-sm" value="${m.name}" onchange="MENU[${i}].name=this.value">
                 <input type="number" class="w-16 bg-slate-50 px-2 py-1 rounded border outline-none text-sm" value="${m.price}" onchange="MENU[${i}].price=Number(this.value)">
@@ -755,6 +755,10 @@
         }
 
         let draggedIndex = null;
+        let longPressTimer = null;
+        let isDragging = false;
+        let draggedElement = null;
+        let placeholder = null;
 
         function dragStart(event) {
             draggedIndex = parseInt(event.target.dataset.index);
@@ -775,6 +779,56 @@
                 renderMenuEditor();
             }
             draggedIndex = null;
+        }
+
+        function touchStart(event, index) {
+            longPressTimer = setTimeout(() => {
+                isDragging = true;
+                draggedIndex = index;
+                draggedElement = event.target.closest('[data-index]');
+                draggedElement.style.opacity = '0.5';
+                placeholder = document.createElement('div');
+                placeholder.className = 'flex gap-2 items-center bg-slate-100 p-2 rounded border border-dashed border-slate-300 mb-2';
+                placeholder.innerHTML = '<span>Drop here</span>';
+                draggedElement.parentNode.insertBefore(placeholder, draggedElement.nextSibling);
+                event.preventDefault();
+            }, 500); // 500ms long press
+        }
+
+        function touchMove(event) {
+            if (isDragging) {
+                event.preventDefault();
+                const touch = event.touches[0];
+                const elements = document.querySelectorAll('#menuEditList > div[data-index]');
+                elements.forEach(el => {
+                    const rect = el.getBoundingClientRect();
+                    if (touch.clientY > rect.top && touch.clientY < rect.bottom) {
+                        if (el !== draggedElement && el !== placeholder) {
+                            el.parentNode.insertBefore(placeholder, el);
+                        }
+                    }
+                });
+            } else {
+                clearTimeout(longPressTimer);
+            }
+        }
+
+        function touchEnd(event) {
+            clearTimeout(longPressTimer);
+            if (isDragging) {
+                isDragging = false;
+                draggedElement.style.opacity = '1';
+                const targetIndex = Array.from(document.querySelectorAll('#menuEditList > div[data-index]')).indexOf(placeholder.previousElementSibling) + 1;
+                if (draggedIndex !== null && targetIndex !== draggedIndex + 1) {
+                    const draggedItem = MENU.splice(draggedIndex, 1)[0];
+                    MENU.splice(targetIndex - 1, 0, draggedItem);
+                    renderMenuEditor();
+                }
+                if (placeholder) placeholder.remove();
+                draggedIndex = null;
+                draggedElement = null;
+                placeholder = null;
+            }
         }
 
         function addMenuItem() {
